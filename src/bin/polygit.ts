@@ -12,9 +12,18 @@
  * http://polymer.github.io/PATENTS.txt
  */
 
-import Koa = require('koa');
+import * as fs from 'fs';
+import * as GithubApi from 'github';
+import * as Koa from 'koa';
 
-import {parser} from '../path/parser';
+import {configForPath} from '../config/component-config';
+import {resolveComponentPath} from '../github/resolver';
+import {parsePath} from '../path/parser';
+import {ParsedPath} from '../path/path';
+
+const github = new GithubApi({});
+github.authenticate(
+    {type: 'token', token: fs.readFileSync('/tmp/github_apikey.txt', 'utf8').trim()});
 
 const app = new Koa();
 
@@ -35,10 +44,31 @@ app.use(async function(ctx, next) {
 });
 
 // URL Parsing
-app.use(async function(ctx, next) {});
+app.use(async function(ctx: Koa.Context, next: Function) {
+  ctx.state.parsedPath = parsePath(decodeURI(ctx.path));
+  await next();
+});
+
+// Config
+app.use(async function(ctx: Koa.Context, next: Function) {
+  ctx.state.resolvedConfig = await configForPath(ctx.state.parsedPath);
+  await next();
+});
+
+// Resolving
+app.use(async function(ctx: Koa.Context, next: Function) {
+  console.log(ctx.state.resolvedConfig);
+  ctx.state.resolvedComponent = await resolveComponentPath(
+      ctx.state.parsedPath, ctx.state.resolvedConfig, github);
+  await next();
+});
+
+// Fetching
+app.use(async function(ctx: Koa.Context, next: Function) {
+  console.log(ctx.state.resolvedComponent);
+});
 
 // response
-
 app.use(ctx => {
   ctx.body = 'Hello World';
 });

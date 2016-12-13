@@ -17,12 +17,12 @@
 
 import {assert} from 'chai';
 
-import {parser} from '../path/parser';
+import {parsePath} from '../path/parser';
 import {ParsedPath} from '../path/path';
 
 suite('path', () => {
   test('simple path parses with no config', () => {
-    const parsed = parser.parse('/components/paper-button/paper-button.html');
+    const parsed = parsePath('/components/paper-button/paper-button.html');
     assert.equal(parsed.component, 'paper-button');
     assert.equal(parsed.filePath, 'paper-button.html');
   });
@@ -30,14 +30,14 @@ suite('path', () => {
 
   test('deep path parses with no config', () => {
     const parsed =
-        parser.parse('/components/paper-button/test/subdir/paper-button.html');
+        parsePath('/components/paper-button/test/subdir/paper-button.html');
     assert.equal(parsed.filePath, 'test/subdir/paper-button.html');
     assert.equal(parsed.component, 'paper-button');
   });
 
 
   test('basic branch config', () => {
-    const parsed: ParsedPath = parser.parse(
+    const parsed: ParsedPath = parsePath(
         '/paper-button+:master/components/paper-button/test/subdir/paper-button.html');
     assert.equal(parsed.repoConfigs[0].kind, 'branch');
     const config = parsed.repoConfigs[0];
@@ -49,7 +49,7 @@ suite('path', () => {
   });
 
   test('branch config with org', () => {
-    const parsed: ParsedPath = parser.parse(
+    const parsed: ParsedPath = parsePath(
         '/paper-button+garlicnation+:master/components/paper-button/test/subdir/paper-button.html');
     assert.equal(parsed.repoConfigs[0].kind, 'branch');
     const config = parsed.repoConfigs[0];
@@ -62,7 +62,7 @@ suite('path', () => {
   });
 
   test('semver config', () => {
-    const parsed: ParsedPath = parser.parse(
+    const parsed: ParsedPath = parsePath(
         '/paper-button+^0.0.1/components/paper-button/test/subdir/paper-button.html');
     assert.equal(parsed.repoConfigs[0].kind, 'semver');
     const config = parsed.repoConfigs[0];
@@ -76,7 +76,7 @@ suite('path', () => {
 
 
   test('semver config with org', () => {
-    const parsed: ParsedPath = parser.parse(
+    const parsed: ParsedPath = parsePath(
         '/paper-button+garlicnation+^0.0.1/components/paper-button/test/subdir/paper-button.html');
     assert.equal(parsed.repoConfigs[0].kind, 'semver');
     const config = parsed.repoConfigs[0];
@@ -89,7 +89,7 @@ suite('path', () => {
   });
 
   test('latest config with org', () => {
-    const parsed: ParsedPath = parser.parse(
+    const parsed: ParsedPath = parsePath(
         '/paper-button+garlicnation+*/components/paper-button/test/subdir/paper-button.html');
     assert.equal(parsed.repoConfigs[0].kind, 'latest');
     const config = parsed.repoConfigs[0];

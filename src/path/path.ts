@@ -12,6 +12,34 @@
  * http://polymer.github.io/PATENTS.txt
  */
 
+/**
+ *
+ * This module describes paths of the form:
+ *
+ * /paper-button+garlicnation+^0.0.1/paper-stax+garlicnation+:master/components/paper-button/test/subdir/paper-button.html
+ *
+ * Which would be represented like:
+ *
+ * {
+ *   component: 'paper-button',
+ *   filePath: 'test/subdir/paper-button.html',
+ *   configs: [
+ *     {
+ *      type: "semver",
+ *      repo: paper-button,
+ *      org: garlicnation
+ *      range: "^0.0.1",
+ *    },
+ *     {
+ *      type: "branch",
+ *      repo: paper-stax,
+ *      org: garlicnation
+ *      branch: "master",
+ *    }
+ *   ]
+ * }
+ */
+
 export interface ParsedPath {
   // The original string that was parsed.
   rawPath: string;

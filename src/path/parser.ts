@@ -20,16 +20,18 @@ import * as fs from 'fs';
 const grammar = `start = componentPath
 
 componentPath = repoConfigs:repoConfig* '/components/' component:pathPart '/' file:joinedPath
-    { return {repoConfigs: repoConfigs, component: component, filePath: file} ;}
+    {
+        return {repoConfigs: repoConfigs, component: component, filePath: file} ;
+    }
 
 joinedPath = prefix:(pathPart '/')* baseName:pathPart
     {
         return prefix.map((parts) => parts.join('')).join('') + baseName;
     }
 
-pathPart = chars:([^/]+) { return chars.join(''); }
+pathPart = $([^/]+)
 
-configPart = chars:([^/+:]+) {return chars.join(''); }
+configPart = $([^/+:]+)
 
 branchRepoConfig = component:configPart '+' org:(configPart '+' )? ':' branch:configPart
     {
@@ -67,12 +69,10 @@ repoConfig = '/' !'components/' config:(latestRepoConfig/semverRepoConfig/branch
 `;
 
 
+const parser = peg.generate(grammar);
 
-export const parser = peg.generate(grammar);
-// export function parsePath(path: string): ParsedPath {
-//   const splitPath = path.split('/components/');
-//   const filePath = splitPath[1];
-//   const configPath = splitPath[0];
-//   const splitFilePath = filePath.split('/');
-//   const requestedComponent = splitFilePa
-// }
+export function parsePath(path: string): ParsedPath {
+  const parsedPath: ParsedPath = parser.parse(path);
+  parsedPath.rawPath = path;
+  return parsedPath;
+}

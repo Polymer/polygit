@@ -14,6 +14,6 @@
     },
     "include": [
         "src/**/*.ts",
-        "src/**/*.pegjs"
+        "custom_typings/**/*.d.ts"
     ]
 }
