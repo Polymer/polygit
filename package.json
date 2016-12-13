@@ -1,0 +1,32 @@
+{
+  "name": "polygit",
+  "version": "0.1.0",
+  "description": "URL rewriting polymer dev server",
+  "main": "lib/bin/polygit.ts",
+  "repository": {
+    "url": "https://github.com/Polymer/polygit.git",
+    "type": "git"
+  },
+  "scripts": {
+    "test": "npm run format && tsc && tslint -c tslint.json src/*.ts src/**/*.ts && mocha",
+    "format": "find src | grep '\\.js$\\|\\.ts$' | xargs ./node_modules/.bin/clang-format --style=file -i"
+  },
+  "author": "The Polymer Project Authors",
+  "license": "BSD-3-Clause",
+  "devDependencies": {
+    "chai": "^3.5.0",
+    "clang-format": "^1.0.46",
+    "source-map-support": "^0.4.6",
+    "typescript": "^2.1.4"
+  },
+  "dependencies": {
+    "@types/chai": "^3.4.34",
+    "@types/koa": "^0.0.0",
+    "@types/mocha": "^2.2.33",
+    "@types/pegjs": "^0.10.0",
+    "koa": "^2",
+    "mocha": "^3.2.0",
+    "pegjs": "^0.10.0",
+    "semver": "^5.3.0"
+  }
+}
