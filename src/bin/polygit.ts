@@ -29,6 +29,7 @@ import {MemcachedUtil} from '../memcached/util';
 import {parsePath} from '../path/parser';
 import {ParsedPath, RepoConfig} from '../path/path';
 import {extractAndIndexTarball} from '../tarball/extract';
+import * as GithubMetadata from '../github/metadata';
 
 const memcached = new Memcached('localhost:11211');
 
@@ -75,19 +76,35 @@ app.use(async function(ctx: Koa.Context, next: Function) {
   await next();
 });
 
-// Resolving
+// Github API
 app.use(async function(ctx: Koa.Context, next: Function) {
-  console.log(ctx.state.resolvedConfig);
   const config: RepoConfig = ctx.state.resolvedConfig;
-  const component = config.component;
-  const org = config.org;
-  if (!org) {
+  if (!config.org) {
     throw new Error(`Unable to determine github org for ${config.component}`);
   }
-  const branches = await getBranches(github, org, component);
-  const tags = await getAllTags(github, org, component);
+  const metadataKey = GithubMetadata.makeMetadataKey(config.org, config.component);
+  const cachedMetadata: string = await MemcachedUtil.get(memcached, metadataKey);
+  if (cachedMetadata) {
+    console.log("Metadata cache hit");
+    const metadata = JSON.parse(cachedMetadata);
+    ctx.state.branches = metadata.branches;
+    ctx.state.tags = metadata.tags;
+  } else {
+    ctx.state.branches = await getBranches(github, config.org, config.component);
+    ctx.state.tags = await getAllTags(github, config.org, config.component);
+    const metadata: GithubMetadata.RepoMetadata = {
+      branches: ctx.state.branches,
+      tags: ctx.state.tags
+    };
+    await MemcachedUtil.save(memcached, metadataKey, JSON.stringify(metadata));
+  }
+  await next();
+});
+
+// Resolving
+app.use(async function(ctx: Koa.Context, next: Function) {
   ctx.state.resolvedComponent = await resolveComponentPath(
-      ctx.state.parsedPath, ctx.state.resolvedConfig, tags, branches);
+      ctx.state.parsedPath, ctx.state.resolvedConfig, ctx.state.tags, ctx.state.branches);
   await next();
 });
 
