@@ -5,6 +5,7 @@ declare module 'github' {
       debug?: boolean;
       protocol?: 'https' | 'ssh';
       host?: string; // should be api.github.com for GitHub
+      headers: any;
     }
 
     interface GetTagsOptions {

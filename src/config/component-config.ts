@@ -55,7 +55,7 @@ export async function configForPath(path: ParsedPath): Promise<RepoConfig> {
     }
   }
   if (!configForComponent) {
-  throw new Error(`Unable to determine config for ${path.component}`);
+    throw new Error(`Unable to determine config for ${path.component}`);
   }
   return configForComponent;
 }

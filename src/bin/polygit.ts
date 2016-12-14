@@ -15,15 +15,30 @@
 import * as fs from 'fs';
 import * as GithubApi from 'github';
 import * as Koa from 'koa';
+import * as Memcached from 'memcached';
+import * as stream from 'stream';
+import * as path from 'path';
+import * as rimraf from 'rimraf-promise';
 
 import {configForPath} from '../config/component-config';
-import {resolveComponentPath} from '../github/resolver';
+import {fetchTarball} from '../github/fetcher';
+import {resolveComponentPath, serializeResolvedComponent, deserializeResolvedComponent, copyResolvedComponent} from '../github/resolver';
 import {parsePath} from '../path/parser';
 import {ParsedPath} from '../path/path';
+import {extractAndIndexTarball} from '../tarball/extract';
+import {MemcachedUtil} from '../memcached/util';
 
-const github = new GithubApi({});
-github.authenticate(
-    {type: 'token', token: fs.readFileSync('/tmp/github_apikey.txt', 'utf8').trim()});
+const memcached = new Memcached('localhost:11211');
+
+
+const github = new GithubApi({
+  // debug: true,
+  headers: {'user-agent': 'Polygit'}
+});
+
+const githubToken = fs.readFileSync('/tmp/github_apikey.txt', 'utf8').trim();
+
+github.authenticate({type: 'token', token: githubToken});
 
 const app = new Koa();
 
@@ -65,7 +80,28 @@ app.use(async function(ctx: Koa.Context, next: Function) {
 
 // Fetching
 app.use(async function(ctx: Koa.Context, next: Function) {
-  console.log(ctx.state.resolvedComponent);
+  const tarballStream = fetchTarball(ctx.state.resolvedComponent, githubToken);
+  const extractedTarball = await extractAndIndexTarball(tarballStream);
+  const root = extractedTarball.root;
+  const saveRequests = new Array<Promise<any>>();
+  for (const entry of extractedTarball.entries) {
+    const componentForEntry = copyResolvedComponent(ctx.state.resolvedComponent);
+    componentForEntry.filePath = entry;
+    const serialized = serializeResolvedComponent(componentForEntry);
+    const buffer = new Promise<Buffer>((resolve, reject) => {
+      fs.readFile(path.join([root, entry]), (err, data) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(data);
+        }
+      });
+    });
+    saveRequests.push(MemcachedUtil.save(memcached, serialized, buffer));
+  }
+  // Wait until all files are saved to memcached.
+  await Promise.all(saveRequests);
+
 });
 
 // response

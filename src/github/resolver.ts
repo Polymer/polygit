@@ -15,26 +15,42 @@
 import * as bower from 'bower';
 import * as GitHubApi from 'github';
 import * as semver from 'semver';
+import * as jsonStableStringify from 'json-stable-stringify';
 
 import {LatestRepoConfig, ParsedPath, RepoConfig} from '../path/path';
 
 export interface ResolvedComponent {
   sha: string;
   filePath: string;
+  component: string;
+  org: string;
 }
 
-async function resolveComponentByTag(
-    component: string, org: string, range: string, api: GitHubApi):
-    Promise<string> {
-      let tagResponse =
-          await api.gitdata.getTags({owner: org, repo: component});
-      let allTags = tagResponse.slice();
-      while (api.hasNextPage(tagResponse)) {
-        tagResponse = await api.getNextPage(tagResponse);
-        allTags = allTags.concat(tagResponse);
-      }
+export function copyResolvedComponent(component: ResolvedComponent): ResolvedComponent {
+    return {
+    sha: component.sha,
+    filePath: component.filePath,
+    component: component.component,
+    org: component.org
+  };
+}
+
+export function serializeResolvedComponent(component: ResolvedComponent):
+    string {
+  // Make sure no extra fields are lying around
+  const cleanedComponent = copyResolvedComponent(component);
+  return jsonStableStringify(cleanedComponent);
+}
+
+export function deserializeResolvedComponent(json: string): ResolvedComponent {
+  return JSON.parse(json);
+}
+
+function resolveComponentByTag(
+    component: string, org: string, range: string, tags: GitHubApi.GetTagsResponse):
+    string {
       let latestMatchingTag: {tag: string, sha: string}|undefined;
-      for (const tag of allTags) {
+      for (const tag of tags) {
         // Strip "refs/tags/" from the ref to get tagname
         const tagName = tag.ref.split('refs/tags/')[1];
         // console.log(tag, range);
@@ -67,8 +83,8 @@ export async function resolveComponentPath(
     Promise<ResolvedComponent> {
       if (!config.org) {
         throw new Error(
-            `Config "${config
-            }" without organization isn't resolvable by github.resolver.`);
+            `Config "${config}" without organization` +
+            ` isn't resolvable by github.resolver.`);
       }
       let sha: string;
       switch (config.kind) {
@@ -86,6 +102,10 @@ export async function resolveComponentPath(
         default:
           throw new Error(`Unexpected config: ${config}`);
       }
-      return {filePath: path.filePath, sha: sha};
-      // const tags = api.gitdata.getTags({path});
+      return {
+        filePath: path.filePath,
+        sha: sha,
+        component: config.component,
+        org: config.org
+      };
     }
