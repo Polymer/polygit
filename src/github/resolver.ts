@@ -14,8 +14,8 @@
 
 import * as bower from 'bower';
 import * as GitHubApi from 'github';
-import * as semver from 'semver';
 import * as jsonStableStringify from 'json-stable-stringify';
+import * as semver from 'semver';
 
 import {LatestRepoConfig, ParsedPath, RepoConfig} from '../path/path';
 
@@ -26,8 +26,9 @@ export interface ResolvedComponent {
   org: string;
 }
 
-export function copyResolvedComponent(component: ResolvedComponent): ResolvedComponent {
-    return {
+export function copyResolvedComponent(component: ResolvedComponent):
+    ResolvedComponent {
+  return {
     sha: component.sha,
     filePath: component.filePath,
     component: component.component,
@@ -47,65 +48,75 @@ export function deserializeResolvedComponent(json: string): ResolvedComponent {
 }
 
 function resolveComponentByTag(
-    component: string, org: string, range: string, tags: GitHubApi.GetTagsResponse):
-    string {
-      let latestMatchingTag: {tag: string, sha: string}|undefined;
-      for (const tag of tags) {
-        // Strip "refs/tags/" from the ref to get tagname
-        const tagName = tag.ref.split('refs/tags/')[1];
-        // console.log(tag, range);
-        if (!semver.valid(tagName)) {
-          continue;
-        }
-        if (semver.satisfies(tagName, range)) {
-          if (!latestMatchingTag || semver.gt(tagName, latestMatchingTag.tag)) {
-            latestMatchingTag = {tag: tagName, sha: tag.object.sha};
-          }
-        }
-      }
-      if (!latestMatchingTag) {
-        throw new Error(
-            `Unable to find tag  for ${component}/${org} satisfying ${range}`);
-      }
-      return latestMatchingTag.sha;
+    component: string,
+    org: string,
+    range: string,
+    tags: GitHubApi.GetTagsResponse): string {
+  let latestMatchingTag: {tag: string, sha: string}|undefined;
+  for (const tag of tags) {
+    // Strip "refs/tags/" from the ref to get tagname
+    const tagName = tag.ref.split('refs/tags/')[1];
+    // console.log(tag, range);
+    if (!semver.valid(tagName)) {
+      continue;
     }
+    if (semver.satisfies(tagName, range)) {
+      if (!latestMatchingTag || semver.gt(tagName, latestMatchingTag.tag)) {
+        latestMatchingTag = {tag: tagName, sha: tag.object.sha};
+      }
+    }
+  }
+  if (!latestMatchingTag) {
+    throw new Error(
+        `Unable to find tag  for ${component}/${org} satisfying ${range}`);
+  }
+  return latestMatchingTag.sha;
+}
 
 async function resolveComponentByBranch(
-    component: string, org: string, branch: string, api: GitHubApi):
+    component: string,
+    org: string,
+    branchName: string,
+    branches: GitHubApi.GetBranchesResponse):
     Promise<string> {
-      const resolvedBranch = await api.repos.getBranch(
-          {owner: org, repo: component, branch: branch});
-      return resolvedBranch.commit.sha;
+      for (const branch of branches) {
+        if (branch.name === branchName) {
+          return branch.commit.sha;
+        }
+      }
+      throw new Error(`Unable to find branch "${branchName}" for repo "${org
+                      }/${component}"`);
     }
 
 export async function resolveComponentPath(
-    path: ParsedPath, config: RepoConfig, api: GitHubApi):
-    Promise<ResolvedComponent> {
-      if (!config.org) {
-        throw new Error(
-            `Config "${config}" without organization` +
-            ` isn't resolvable by github.resolver.`);
-      }
-      let sha: string;
-      switch (config.kind) {
-        case 'latest':
-          sha =
-              await resolveComponentByTag(path.component, config.org, '*', api);
-          break;
-        case 'semver':
-          sha = await resolveComponentByTag(
-              path.component, config.org, config.range, api);
-          break;
-        case 'branch':
-          sha = await resolveComponentByBranch(
-              path.component, config.org, config.branch, api);
-        default:
-          throw new Error(`Unexpected config: ${config}`);
-      }
-      return {
-        filePath: path.filePath,
-        sha: sha,
-        component: config.component,
-        org: config.org
-      };
-    }
+    path: ParsedPath,
+    config: RepoConfig,
+    tags: GitHubApi.GetTagsResponse,
+    branches: GitHubApi.GetBranchesResponse): Promise<ResolvedComponent> {
+  if (!config.org) {
+    throw new Error(
+        `Config "${config}" without organization` +
+        ` isn't resolvable by github.resolver.`);
+  }
+  let sha: string;
+  switch (config.kind) {
+    case 'latest':
+      sha = await resolveComponentByTag(path.component, config.org, '*', tags);
+      break;
+    case 'semver':
+      sha = await resolveComponentByTag(
+          path.component, config.org, config.range, tags);
+      break;
+    case 'branch':
+      sha = await resolveComponentByBranch(
+          path.component, config.org, config.branch, branches);
+    default:
+      throw new Error(`Unexpected config: ${config}`);
+  }
+  return {
+    filePath: path.filePath,
+    sha: sha,
+    component: config.component,
+    org: config.org
+  };
+}

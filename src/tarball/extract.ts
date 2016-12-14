@@ -17,8 +17,8 @@ import * as stream from 'stream';
 import * as tar from 'tar-fs';
 import * as tempLib from 'temp';
 
-// const temp = tempLib.track();
-const temp = tempLib;
+const temp = tempLib.track();
+// const temp = tempLib;
 
 export interface ExtractedTarIndex {
   root: string;          // The directory the tarball was extracted to.
@@ -27,6 +27,10 @@ export interface ExtractedTarIndex {
 
 export interface Pipable {
   pipe(s: stream.Writable|stream.Duplex): stream.Readable;
+}
+
+export interface TarCallback {
+  (header: string, content: stream.Readable): void;
 }
 
 export async function extractAndIndexTarball(tarball: Pipable):
@@ -49,14 +53,17 @@ export async function extractAndIndexTarball(tarball: Pipable):
             header.name = header.name.split(('/')).slice(1).join('/');
             console.log(header.name);
             entries.add(header.name);
+            return header;
           }
         }))
-        .on('end',
+        .on('finish',
             (arg: any) => {
+              console.log('Ended the tarball pipe!')
               console.log(arg);
               resolve();
             })
         .on('error', (err) => {
+          console.log('TArball error!!');
           reject(err);
         });
   });

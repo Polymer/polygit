@@ -15,8 +15,12 @@
 import * as Memcached from 'memcached';
 
 export class MemcachedUtil {
- static async save(memcached: Memcached, key: string, value: string|Buffer|Promise<string|Buffer>, lifetime?: number): Promise<void> {
-    await new Promise(async (resolve, reject) => {
+  static async save(
+      memcached: Memcached,
+      key: string,
+      value: string|Buffer|Promise<string|Buffer>,
+      lifetime?: number): Promise<void> {
+    await new Promise(async(resolve, reject) => {
       memcached.set(key, await value, lifetime || 60, err => {
         if (err) {
           reject(err);
@@ -25,17 +29,17 @@ export class MemcachedUtil {
         }
       });
     });
-}
+  }
 
-static async get(memcached: Memcached, key: string, value: string|Buffer|Promise<string|Buffer>, lifetime?: number): Promise<void> {
-    await new Promise(async (resolve, reject) => {
-      memcached.set(key, await value, lifetime || 60, err => {
+  static get(memcached: Memcached, key: string): Promise<any> {
+    return new Promise((resolve, reject) => {
+      memcached.get(key, (err, data) => {
         if (err) {
           reject(err);
         } else {
-          resolve();
+          resolve(data);
         }
       });
     });
-}
+  }
 }

@@ -16,17 +16,19 @@ import * as fs from 'fs';
 import * as GithubApi from 'github';
 import * as Koa from 'koa';
 import * as Memcached from 'memcached';
-import * as stream from 'stream';
+import * as mime from 'mime';
 import * as path from 'path';
 import * as rimraf from 'rimraf-promise';
+import * as stream from 'stream';
 
 import {configForPath} from '../config/component-config';
+import {getAllTags, getBranches} from '../github/api';
 import {fetchTarball} from '../github/fetcher';
-import {resolveComponentPath, serializeResolvedComponent, deserializeResolvedComponent, copyResolvedComponent} from '../github/resolver';
-import {parsePath} from '../path/parser';
-import {ParsedPath} from '../path/path';
-import {extractAndIndexTarball} from '../tarball/extract';
+import {copyResolvedComponent, deserializeResolvedComponent, resolveComponentPath, ResolvedComponent, serializeResolvedComponent} from '../github/resolver';
 import {MemcachedUtil} from '../memcached/util';
+import {parsePath} from '../path/parser';
+import {ParsedPath, RepoConfig} from '../path/path';
+import {extractAndIndexTarball} from '../tarball/extract';
 
 const memcached = new Memcached('localhost:11211');
 
@@ -62,6 +64,9 @@ app.use(async function(ctx, next) {
 app.use(async function(ctx: Koa.Context, next: Function) {
   ctx.state.parsedPath = parsePath(decodeURI(ctx.path));
   await next();
+  if (ctx.status === 200) {
+    ctx.set('Content-Type', mime.lookup(ctx.path));
+  }
 });
 
 // Config
@@ -73,23 +78,48 @@ app.use(async function(ctx: Koa.Context, next: Function) {
 // Resolving
 app.use(async function(ctx: Koa.Context, next: Function) {
   console.log(ctx.state.resolvedConfig);
+  const config: RepoConfig = ctx.state.resolvedConfig;
+  const component = config.component;
+  const org = config.org;
+  if (!org) {
+    throw new Error(`Unable to determine github org for ${config.component}`);
+  }
+  const branches = await getBranches(github, org, component);
+  const tags = await getAllTags(github, org, component);
   ctx.state.resolvedComponent = await resolveComponentPath(
-      ctx.state.parsedPath, ctx.state.resolvedConfig, github);
+      ctx.state.parsedPath, ctx.state.resolvedConfig, tags, branches);
   await next();
 });
 
 // Fetching
 app.use(async function(ctx: Koa.Context, next: Function) {
+  const requestedComponentKey =
+      serializeResolvedComponent(ctx.state.resolvedComponent);
+  const cachedFile = await MemcachedUtil.get(memcached, requestedComponentKey);
+  console.log(`Key: "${requestedComponentKey}"`);
+  if (cachedFile) {
+    console.log('Cache hit!');
+    ctx.body = cachedFile;
+    return;
+  }
+
   const tarballStream = fetchTarball(ctx.state.resolvedComponent, githubToken);
   const extractedTarball = await extractAndIndexTarball(tarballStream);
+  console.log('extracted tarball');
   const root = extractedTarball.root;
   const saveRequests = new Array<Promise<any>>();
   for (const entry of extractedTarball.entries) {
-    const componentForEntry = copyResolvedComponent(ctx.state.resolvedComponent);
+    const componentForEntry =
+        copyResolvedComponent(ctx.state.resolvedComponent);
     componentForEntry.filePath = entry;
+    console.log(JSON.stringify(componentForEntry));
     const serialized = serializeResolvedComponent(componentForEntry);
-    const buffer = new Promise<Buffer>((resolve, reject) => {
-      fs.readFile(path.join([root, entry]), (err, data) => {
+    const buffer = await new Promise<Buffer|null>((resolve, reject) => {
+      if (!entry || entry[entry.length - 1] === '/') {
+        resolve(null);
+      }
+      console.log(`entry: ${entry}`);
+      fs.readFile(path.join(root, entry), (err, data) => {
         if (err) {
           reject(err);
         } else {
@@ -97,11 +127,23 @@ app.use(async function(ctx: Koa.Context, next: Function) {
         }
       });
     });
-    saveRequests.push(MemcachedUtil.save(memcached, serialized, buffer));
+    if (buffer) {
+      saveRequests.push(MemcachedUtil.save(memcached, serialized, buffer));
+    }
   }
   // Wait until all files are saved to memcached.
+  console.log('Saving to memcached');
   await Promise.all(saveRequests);
-
+  console.log('Saved to memcached');
+  const fetchedFile = await MemcachedUtil.get(memcached, requestedComponentKey);
+  console.log('fetched from memcached');
+  if (!fetchedFile) {
+    ctx.status = 404;
+    ctx.body = 'Not found.';
+    return;
+  }
+  ctx.body = fetchedFile;
+  return;
 });
 
 // response

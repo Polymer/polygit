@@ -18,6 +18,11 @@ import {LatestRepoConfig, ParsedPath, RepoConfig} from '../path/path';
 
 const GITHUB_URL = 'github.com/';
 
+// Some orgs need hardcoding
+const ORG_TABLE: {[key: string]: string} = {
+  'font-roboto': 'PolymerElements'
+};
+
 export async function configForPath(path: ParsedPath): Promise<RepoConfig> {
   const component = path.component;
   let configForComponent: RepoConfig|null = null;
@@ -25,6 +30,18 @@ export async function configForPath(path: ParsedPath): Promise<RepoConfig> {
     if (config.component === component) {
       configForComponent = config;
       break;
+    }
+  }
+  let orgFromTable = ORG_TABLE[component];
+  if (orgFromTable) {
+    if (configForComponent && !!configForComponent.org) {
+      configForComponent.org = orgFromTable;
+    } else {
+      configForComponent = {
+        kind: 'latest',
+        org: orgFromTable,
+        component: component
+      };
     }
   }
   if (!configForComponent || !configForComponent.org) {
