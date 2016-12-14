@@ -53,7 +53,7 @@ function getGithubToken(): Promise<string> {
         if (err) {
           reject(err);
         } else {
-          resolve(body);
+          resolve(body.trim());
         }
       });
     } else {
