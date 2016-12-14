@@ -45,25 +45,21 @@ export async function extractAndIndexTarball(tarball: Pipable):
     });
   });
   const entries = new Set<string>();
-  console.log(`saving tarball to ${outDir}`);
   await new Promise((resolve, reject) => {
     tarball.pipe(gunzip())
         .pipe(tar.extract(outDir, {
           map: (header: {name: string}) => {
             header.name = header.name.split(('/')).slice(1).join('/');
-            console.log(header.name);
             entries.add(header.name);
             return header;
           }
         }))
         .on('finish',
             (arg: any) => {
-              console.log('Ended the tarball pipe!')
-              console.log(arg);
               resolve();
             })
         .on('error', (err) => {
-          console.log('TArball error!!');
+          console.log('Tarball error!!');
           reject(err);
         });
   });

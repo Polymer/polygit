@@ -18,6 +18,7 @@ import * as Koa from 'koa';
 import * as Memcached from 'memcached';
 import * as mime from 'mime';
 import * as path from 'path';
+import * as request from 'request';
 import * as rimraf from 'rimraf-promise';
 import * as stream from 'stream';
 
@@ -39,9 +40,32 @@ const github = new GithubApi({
   headers: {'user-agent': 'Polygit'}
 });
 
-const githubToken = fs.readFileSync('/tmp/github_apikey.txt', 'utf8').trim();
+const TOKEN_METADATA_URL =
+    'http://metadata.google.internal/computeMetadata/v1/project/attributes/github-token';
 
-github.authenticate({type: 'token', token: githubToken});
+let githubToken: string;
+function getGithubToken(): Promise<string> {
+  return new Promise((resolve, reject) => {
+    console.log(JSON.stringify(process.env));
+    if (process.env.GCLOUD_PROJECT) {
+      request(TOKEN_METADATA_URL, {}, (err, response, body) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(body);
+        }
+      });
+    } else {
+      fs.readFile('/tmp/github_apikey.txt', (err, data) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(data.toString('utf8'));
+        }
+      });
+    }
+  });
+}
 
 const app = new Koa();
 
@@ -156,6 +180,7 @@ app.use(async function(ctx: Koa.Context, next: Function) {
   console.log('Saving to memcached');
   await Promise.all(saveRequests);
   console.log('Saved to memcached');
+  rimraf(root);
   const fetchedFile = await MemcachedUtil.get(memcached, requestedComponentKey);
   console.log('fetched from memcached');
   if (!fetchedFile) {
@@ -167,9 +192,8 @@ app.use(async function(ctx: Koa.Context, next: Function) {
   return;
 });
 
-// response
-app.use(ctx => {
-  ctx.body = 'Hello World';
+getGithubToken().then((token) => {
+  githubToken = token;
+  github.authenticate({type: 'token', token: githubToken});
+  app.listen(3000);
 });
-
-app.listen(3000);
