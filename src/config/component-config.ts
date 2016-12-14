@@ -56,7 +56,7 @@ export async function configForPath(path: ParsedPath): Promise<RepoConfig> {
               .on('error', (err: Error) => reject(err));
         });
     if (!cachedRepo) {
-      cache.put(component, repoFromBower, 60);
+      cache.put(component, repoFromBower, 60000);
     }
 
     const githubUrlIndex = repoFromBower.url.indexOf(GITHUB_URL);

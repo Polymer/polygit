@@ -12,6 +12,8 @@
  * http://polymer.github.io/PATENTS.txt
  */
 
+require('source-map-support').install();
+
 import * as fs from 'fs';
 import * as GithubApi from 'github';
 import * as Koa from 'koa';
@@ -31,8 +33,8 @@ import {MemcachedUtil} from '../memcached/util';
 import {parsePath} from '../path/parser';
 import {ParsedPath, RepoConfig} from '../path/path';
 import {extractAndIndexTarball} from '../tarball/extract';
-
-const memcached = new Memcached('localhost:11211');
+// const memcached = new Memcached('localhost:11211');
+const memcached: any = {};
 
 
 const github = new GithubApi({
@@ -91,7 +93,14 @@ app.use(async function(ctx, next) {
 
 // URL Parsing
 app.use(async function(ctx: Koa.Context, next: Function) {
-  ctx.state.parsedPath = parsePath(decodeURI(ctx.path));
+  try {
+    ctx.state.parsedPath = parsePath(decodeURI(ctx.path));
+  } catch (err) {
+    ctx.body = `Error parsing path: ${ctx.path}.`;
+    ctx.status = 500;
+    console.error(`Error parsing path: ${ctx.path}.` + err);
+    return;
+  }
   await next();
   if (ctx.status === 200) {
     ctx.set('Content-Type', mime.lookup(ctx.path));
@@ -120,6 +129,7 @@ app.use(async function(ctx: Koa.Context, next: Function) {
     ctx.state.branches = metadata.branches;
     ctx.state.tags = metadata.tags;
   } else {
+    console.log(`Metadata cache miss for ${config.org}/${config.component}`);
     ctx.state.branches =
         await getBranches(github, config.org, config.component);
     ctx.state.tags = await getAllTags(github, config.org, config.component);
@@ -127,7 +137,9 @@ app.use(async function(ctx: Koa.Context, next: Function) {
       branches: ctx.state.branches,
       tags: ctx.state.tags
     };
-    await MemcachedUtil.save(memcached, metadataKey, JSON.stringify(metadata));
+    console.log('Saving metadata');
+    await MemcachedUtil.save(
+        memcached, metadataKey, JSON.stringify(metadata), 60);
   }
   await next();
 });
@@ -176,7 +188,8 @@ app.use(async function(ctx: Koa.Context, next: Function) {
       });
     });
     if (buffer) {
-      saveRequests.push(MemcachedUtil.save(memcached, serialized, buffer));
+      // Files should never change, so cache for 10m
+      saveRequests.push(MemcachedUtil.save(memcached, serialized, buffer, 600));
     }
   }
   // Wait until all files are saved to memcached.
