@@ -24,12 +24,12 @@ import * as stream from 'stream';
 import {configForPath} from '../config/component-config';
 import {getAllTags, getBranches} from '../github/api';
 import {fetchTarball} from '../github/fetcher';
+import * as GithubMetadata from '../github/metadata';
 import {copyResolvedComponent, deserializeResolvedComponent, resolveComponentPath, ResolvedComponent, serializeResolvedComponent} from '../github/resolver';
 import {MemcachedUtil} from '../memcached/util';
 import {parsePath} from '../path/parser';
 import {ParsedPath, RepoConfig} from '../path/path';
 import {extractAndIndexTarball} from '../tarball/extract';
-import * as GithubMetadata from '../github/metadata';
 
 const memcached = new Memcached('localhost:11211');
 
@@ -82,15 +82,18 @@ app.use(async function(ctx: Koa.Context, next: Function) {
   if (!config.org) {
     throw new Error(`Unable to determine github org for ${config.component}`);
   }
-  const metadataKey = GithubMetadata.makeMetadataKey(config.org, config.component);
-  const cachedMetadata: string = await MemcachedUtil.get(memcached, metadataKey);
+  const metadataKey =
+      GithubMetadata.makeMetadataKey(config.org, config.component);
+  const cachedMetadata: string =
+      await MemcachedUtil.get(memcached, metadataKey);
   if (cachedMetadata) {
-    console.log("Metadata cache hit");
+    console.log('Metadata cache hit');
     const metadata = JSON.parse(cachedMetadata);
     ctx.state.branches = metadata.branches;
     ctx.state.tags = metadata.tags;
   } else {
-    ctx.state.branches = await getBranches(github, config.org, config.component);
+    ctx.state.branches =
+        await getBranches(github, config.org, config.component);
     ctx.state.tags = await getAllTags(github, config.org, config.component);
     const metadata: GithubMetadata.RepoMetadata = {
       branches: ctx.state.branches,
@@ -104,7 +107,10 @@ app.use(async function(ctx: Koa.Context, next: Function) {
 // Resolving
 app.use(async function(ctx: Koa.Context, next: Function) {
   ctx.state.resolvedComponent = await resolveComponentPath(
-      ctx.state.parsedPath, ctx.state.resolvedConfig, ctx.state.tags, ctx.state.branches);
+      ctx.state.parsedPath,
+      ctx.state.resolvedConfig,
+      ctx.state.tags,
+      ctx.state.branches);
   await next();
 });
 
@@ -129,13 +135,11 @@ app.use(async function(ctx: Koa.Context, next: Function) {
     const componentForEntry =
         copyResolvedComponent(ctx.state.resolvedComponent);
     componentForEntry.filePath = entry;
-    console.log(JSON.stringify(componentForEntry));
     const serialized = serializeResolvedComponent(componentForEntry);
     const buffer = await new Promise<Buffer|null>((resolve, reject) => {
       if (!entry || entry[entry.length - 1] === '/') {
         resolve(null);
       }
-      console.log(`entry: ${entry}`);
       fs.readFile(path.join(root, entry), (err, data) => {
         if (err) {
           reject(err);
