@@ -69,6 +69,11 @@ function getGithubToken(): Promise<string> {
 const app = new Koa();
 
 app.use(async function(ctx, next) {
+  if (ctx.path === '/_ah/health') {
+    ctx.body = 'OK';
+    ctx.status = 200;
+    return;
+  }
   const start = +new Date();
   await next();
   const ms = (+new Date() - start);
@@ -193,5 +198,5 @@ app.use(async function(ctx: Koa.Context, next: Function) {
 getGithubToken().then((token) => {
   githubToken = token;
   github.authenticate({type: 'token', token: githubToken});
-  app.listen(3000);
+  app.listen(8080);
 });
