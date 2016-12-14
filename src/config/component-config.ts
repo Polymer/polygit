@@ -20,7 +20,8 @@ const GITHUB_URL = 'github.com/';
 
 // Some orgs need hardcoding
 const ORG_TABLE: {[key: string]: string} = {
-  'font-roboto': 'PolymerElements'
+  'font-roboto': 'PolymerElements',
+  'paper-ripple': 'PolymerElements'
 };
 
 export async function configForPath(path: ParsedPath): Promise<RepoConfig> {
