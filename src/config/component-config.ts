@@ -13,6 +13,7 @@
  */
 
 import * as bower from 'bower';
+import cache = require('memory-cache');
 
 import {LatestRepoConfig, ParsedPath, RepoConfig} from '../path/path';
 
@@ -46,12 +47,17 @@ export async function configForPath(path: ParsedPath): Promise<RepoConfig> {
     }
   }
   if (!configForComponent || !configForComponent.org) {
+    const cachedRepo = cache.get(component);
     const repoFromBower =
+        cachedRepo ||
         await new Promise<bower.LookupResponse>((resolve, reject) => {
           bower.commands.lookup(component)
               .on('end', (results: bower.LookupResponse) => resolve(results))
               .on('error', (err: Error) => reject(err));
         });
+    if (!cachedRepo) {
+      cache.put(component, repoFromBower, 60);
+    }
 
     const githubUrlIndex = repoFromBower.url.indexOf(GITHUB_URL);
     if (githubUrlIndex === -1) {

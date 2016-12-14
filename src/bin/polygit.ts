@@ -46,7 +46,6 @@ const TOKEN_METADATA_URL =
 let githubToken: string;
 function getGithubToken(): Promise<string> {
   return new Promise((resolve, reject) => {
-    console.log(JSON.stringify(process.env));
     if (process.env.GCLOUD_PROJECT) {
       request(TOKEN_METADATA_URL, {}, (err, response, body) => {
         if (err) {
@@ -60,7 +59,7 @@ function getGithubToken(): Promise<string> {
         if (err) {
           reject(err);
         } else {
-          resolve(data.toString('utf8'));
+          resolve(data.toString('utf8').trim());
         }
       });
     }
@@ -143,9 +142,8 @@ app.use(async function(ctx: Koa.Context, next: Function) {
   const requestedComponentKey =
       serializeResolvedComponent(ctx.state.resolvedComponent);
   const cachedFile = await MemcachedUtil.get(memcached, requestedComponentKey);
-  console.log(`Key: "${requestedComponentKey}"`);
   if (cachedFile) {
-    console.log('Cache hit!');
+    console.log('Cache hit for file!');
     ctx.body = cachedFile;
     return;
   }

@@ -23,6 +23,10 @@
     "@types/cookies" "*"
     "@types/node" "*"
 
+"@types/memory-cache":
+  version "0.0.29"
+  resolved "https://registry.yarnpkg.com/@types/memory-cache/-/memory-cache-0.0.29.tgz#ae3f2e02d9c5595229155f924985e09d233988f9"
+
 "@types/mime":
   version "0.0.29"
   resolved "https://registry.yarnpkg.com/@types/mime/-/mime-0.0.29.tgz#fbcfd330573b912ef59eeee14602bface630754b"
@@ -726,6 +730,10 @@ memcached:
   dependencies:
     hashring "3.2.x"
     jackpot ">=0.0.6"
+
+memory-cache:
+  version "0.1.6"
+  resolved "https://registry.yarnpkg.com/memory-cache/-/memory-cache-0.1.6.tgz#2ed9933ed7a8c718249be7366f7ca8749acf8a24"
 
 mime, mime@^1.2.11:
   version "1.3.4"
