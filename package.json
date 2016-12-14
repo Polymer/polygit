@@ -48,6 +48,7 @@
     "request-promise-native": "^1.0.3",
     "rimraf-promise": "^2.0.0",
     "semver": "^5.3.0",
+    "source-map-support": "^0.4.6",
     "tar-fs": "^1.14.0",
     "temp": "^0.8.3"
   }
