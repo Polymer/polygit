@@ -110,8 +110,9 @@ export async function resolveComponentPath(
     case 'branch':
       sha = await resolveComponentByBranch(
           path.component, config.org, config.branch, branches);
+      break;
     default:
-      throw new Error(`Unexpected config: ${config}`);
+      throw new Error(`Unexpected config: ${JSON.stringify(config)}`);
   }
   return {
     filePath: path.filePath,

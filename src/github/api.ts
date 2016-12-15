@@ -14,18 +14,24 @@
 
 import * as GitHubApi from 'github';
 
+async function combineAllResponsePages<T>(
+    api: GitHubApi, initialResponse: T[]): Promise<T[]> {
+  let response = initialResponse.slice();
+  while (api.hasNextPage(initialResponse)) {
+    initialResponse = await api.getNextPage(initialResponse);
+    response = response.concat(initialResponse);
+  }
+  return response;
+}
+
 export async function getAllTags(api: GitHubApi, org: string, repo: string):
     Promise<GitHubApi.GetTagsResponse> {
-  let tagResponse = await api.gitdata.getTags({owner: org, repo: repo});
-  let allTags = tagResponse.slice();
-  while (api.hasNextPage(tagResponse)) {
-    tagResponse = await api.getNextPage(tagResponse);
-    allTags = allTags.concat(tagResponse);
-  }
-  return tagResponse;
+  return combineAllResponsePages(
+      api, await api.gitdata.getTags({owner: org, repo: repo}));
 }
 
 export async function getBranches(api: GitHubApi, org: string, repo: string):
     Promise<GitHubApi.GetBranchesResponse> {
-  return await api.repos.getBranches({owner: org, repo: repo});
+  return combineAllResponsePages(
+      api, await api.repos.getBranches({owner: org, repo: repo}));
 }
