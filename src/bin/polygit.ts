@@ -17,6 +17,7 @@ require('source-map-support').install();
 import * as fs from 'fs';
 import * as GithubApi from 'github';
 import * as Koa from 'koa';
+import * as koaSend from 'koa-send';
 import * as Memcached from 'memcached';
 import * as mime from 'mime';
 import * as path from 'path';
@@ -73,11 +74,31 @@ function getGithubToken(): Promise<string> {
 
 const app = new Koa();
 
+const SEND_OPTIONS = {
+  root: path.join(process.cwd(), 'static')
+};
+
+const staticPathHandlers:
+    {[key: string]: (ctx: Koa.Context, next?: Function) => void} = {
+      '/_ah/health': (ctx: Koa.Context) => {
+        ctx.body = 'OK';
+        ctx.status = 200;
+        return;
+      },
+      '/index.html': async(ctx: Koa.Context) => {
+        return await koaSend(ctx, 'index.html', SEND_OPTIONS);
+      },
+      '/favicon.ico': async(ctx: Koa.Context) => {
+        return await koaSend(ctx, 'favicon.ico', SEND_OPTIONS);
+      },
+      '/': (ctx: Koa.Context) => {
+        return staticPathHandlers['/index.html'](ctx);
+      }
+    };
+
 app.use(async function(ctx, next) {
-  if (ctx.path === '/_ah/health') {
-    ctx.body = 'OK';
-    ctx.status = 200;
-    return;
+  if (staticPathHandlers[ctx.path]) {
+    return await staticPathHandlers[ctx.path](ctx, next);
   }
   const start = +new Date();
   await next();
