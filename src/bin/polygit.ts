@@ -49,13 +49,16 @@ let githubToken: string;
 function getGithubToken(): Promise<string> {
   return new Promise((resolve, reject) => {
     if (process.env.GCLOUD_PROJECT) {
-      request(TOKEN_METADATA_URL, {}, (err, response, body) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(body.trim());
-        }
-      });
+      request(
+          TOKEN_METADATA_URL,
+          {headers: {'Metadata-Flavor': 'Google'}},
+          (err, response, body) => {
+            if (err) {
+              reject(err);
+            } else {
+              resolve(body.trim());
+            }
+          });
     } else {
       fs.readFile('/tmp/github_apikey.txt', (err, data) => {
         if (err) {
@@ -80,6 +83,7 @@ app.use(async function(ctx, next) {
   await next();
   const ms = (+new Date() - start);
   ctx.set('X-Response-Time', `${ms}ms`);
+  ctx.set('Access-Control-Allow-Origin', '*');
 });
 
 // logger
@@ -210,6 +214,7 @@ app.use(async function(ctx: Koa.Context, next: Function) {
 
 getGithubToken().then((token) => {
   githubToken = token;
+  // console.log(`Token: "${githubToken}"`);
   github.authenticate({type: 'token', token: githubToken});
   app.listen(8080);
 });
