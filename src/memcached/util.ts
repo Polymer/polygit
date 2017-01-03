@@ -50,7 +50,7 @@ export class MemcachedUtil {
   static async save(
       memcached: Memcached,
       key: string,
-      value: string|Buffer|Promise<string|Buffer>,
+      value: string|Buffer|Promise<string|Buffer>|any,
       lifetime?: number): Promise<void> {
     await new Promise(async(resolve, reject) => {
       try {

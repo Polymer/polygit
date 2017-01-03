@@ -214,7 +214,7 @@ app.use(async function(ctx: Koa.Context, next: Function) {
     });
     if (buffer) {
       // Files should never change, so cache for 10m
-      saveRequests.push(MemcachedUtil.save(memcached, serialized, buffer, 600));
+      saveRequests.push(MemcachedUtil.save(memcached, componentForEntry, buffer, 600));
     }
   }
   // Wait until all files are saved to memcached.
