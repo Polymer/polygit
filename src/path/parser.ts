@@ -16,6 +16,7 @@ import {ParsedPath} from './path';
 
 import peg = require('pegjs');
 import * as fs from 'fs';
+import * as libPath from 'path';
 
 const grammar = `start = componentPath
 
@@ -24,7 +25,7 @@ componentPath = repoConfigs:repoConfig* '/components/' component:pathPart '/' fi
         return {repoConfigs: repoConfigs, component: component, filePath: file} ;
     }
 
-joinedPath = prefix:(pathPart '/')* baseName:pathPart
+joinedPath = prefix:(pathPart '/'+)* baseName:pathPart
     {
         return prefix.map((parts) => parts.join('')).join('') + baseName;
     }
@@ -42,7 +43,7 @@ branchRepoConfig = component:configPart '+' org:(configPart '+' )? ':' branch:co
             org: org? org[0] : null
         }
     }
-    
+
 semverRepoConfig = component:configPart '+' org:(configPart '+' )? range:configPart
     {
         return {
@@ -72,7 +73,8 @@ repoConfig = '/' !'components/' config:(latestRepoConfig/semverRepoConfig/branch
 const parser = peg.generate(grammar);
 
 export function parsePath(path: string): ParsedPath {
-  const parsedPath: ParsedPath = parser.parse(path);
+  const normalizedPath = libPath.normalize(path);
+  const parsedPath: ParsedPath = parser.parse(normalizedPath);
   parsedPath.rawPath = path;
   return parsedPath;
 }

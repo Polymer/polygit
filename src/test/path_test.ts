@@ -99,4 +99,28 @@ suite('path', () => {
       assert.equal(config.org, 'garlicnation');
     }
   });
+
+  test('Duplicate path parts 1', () => {
+    const parsed: ParsedPath = parsePath(
+        '/paper-button+garlicnation+*//components/paper-button//test/subdir/paper-button.html');
+    assert.equal(parsed.repoConfigs[0].kind, 'latest');
+    const config = parsed.repoConfigs[0];
+    // Type guard
+    if (config.kind === 'latest') {
+      assert.equal(config.component, 'paper-button');
+      assert.equal(config.org, 'garlicnation');
+    }
+
+  });
+  test('Duplicate path parts 2', () => {
+    const parsed: ParsedPath =
+        parsePath('//polymer+:master/components/polymer/polymer.html');
+    assert.equal(parsed.repoConfigs[0].kind, 'branch');
+    const config = parsed.repoConfigs[0];
+    // Type guard
+    if (config.kind === 'branch') {
+      assert.equal(config.component, 'polymer');
+    }
+
+  });
 });
