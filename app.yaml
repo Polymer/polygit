@@ -1,3 +1,5 @@
 runtime: nodejs
 env: flex
 instance_class: F4
+env_variables:
+  USE_GAE_MEMCACHE: 1

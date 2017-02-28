@@ -51,18 +51,21 @@ function resolveComponentByTag(
     component: string,
     org: string,
     range: string,
-    tags: GitHubApi.GetTagsResponse): string {
+    tags: GitHubApi.GetRepoTagsResponse): string {
   let latestMatchingTag: {tag: string, sha: string}|undefined;
   for (const tag of tags) {
     // Strip "refs/tags/" from the ref to get tagname
-    const tagName = tag.ref.split('refs/tags/')[1];
+    const tagName = tag.name;
+    if (tagName === range) {
+      break;
+    }
     // console.log(tag, range);
     if (!semver.valid(tagName)) {
       continue;
     }
     if (semver.satisfies(tagName, range)) {
       if (!latestMatchingTag || semver.gt(tagName, latestMatchingTag.tag)) {
-        latestMatchingTag = {tag: tagName, sha: tag.object.sha};
+        latestMatchingTag = {tag: tagName, sha: tag.commit.sha};
       }
     }
   }
@@ -91,7 +94,7 @@ async function resolveComponentByBranch(
 export async function resolveComponentPath(
     path: ParsedPath,
     config: RepoConfig,
-    tags: GitHubApi.GetTagsResponse,
+    tags: GitHubApi.GetRepoTagsResponse,
     branches: GitHubApi.GetBranchesResponse): Promise<ResolvedComponent> {
   if (!config.org) {
     throw new Error(

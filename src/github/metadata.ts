@@ -28,5 +28,5 @@ export function makeMetadataKey(org: string, repo: string) {
 
 export interface RepoMetadata {
   branches: GitHubApi.GetBranchesResponse;
-  tags: GitHubApi.GetTagsResponse;
+  tags: GitHubApi.GetRepoTagsResponse;
 }

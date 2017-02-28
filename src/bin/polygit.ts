@@ -24,6 +24,7 @@ import * as path from 'path';
 import * as request from 'request';
 import * as rimraf from 'rimraf-promise';
 import * as stream from 'stream';
+import * as process from 'process';
 
 import {configForPath} from '../config/component-config';
 import {getAllTags, getBranches} from '../github/api';
@@ -34,8 +35,19 @@ import {MemcachedUtil} from '../memcached/util';
 import {parsePath} from '../path/parser';
 import {ParsedPath, RepoConfig} from '../path/path';
 import {extractAndIndexTarball} from '../tarball/extract';
-// const memcached = new Memcached('localhost:11211');
-const memcached: any = {};
+
+let memcachedConfig: string;
+if (process.env.GAE_MEMCACHE_HOST) {
+  memcachedConfig = `${process.env['GAE_MEMCACHE_HOST']}:${process.env['GAE_MEMCACHE_PORT']}`;
+}
+else if (process.env.USE_GAE_MEMCACHE) {
+  memcachedConfig = 'memcached:11211';
+} else {
+  memcachedConfig = 'localhost:11211';
+}
+
+const memcached = new Memcached(memcachedConfig);
+// const memcached: any = {};
 
 
 const github = new GithubApi({
@@ -157,7 +169,9 @@ app.use(async function(ctx: Koa.Context, next: Function) {
     console.log(`Metadata cache miss for ${config.org}/${config.component}`);
     ctx.state.branches =
         await getBranches(github, config.org, config.component);
+    console.log(ctx.state.branches);
     ctx.state.tags = await getAllTags(github, config.org, config.component);
+    console.log(ctx.state.tags);
     const metadata: GithubMetadata.RepoMetadata = {
       branches: ctx.state.branches,
       tags: ctx.state.tags
@@ -214,7 +228,7 @@ app.use(async function(ctx: Koa.Context, next: Function) {
     });
     if (buffer) {
       // Files should never change, so cache for 10m
-      saveRequests.push(MemcachedUtil.save(memcached, componentForEntry, buffer, 600));
+      saveRequests.push(MemcachedUtil.save(memcached, serialized, buffer, 600));
     }
   }
   // Wait until all files are saved to memcached.

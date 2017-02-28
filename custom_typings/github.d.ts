@@ -15,7 +15,9 @@ declare module 'github' {
       page_number?: number;
     }
 
-    type GetTagsEntry = {ref: string, object: {sha: string}};
+        type GetTagsEntry = {ref: string, object: {sha: string}};
+
+        type GetRepoTagsEntry = {name: string, commit: {sha: string}};
 
     type GetTagsResponse = GetTagsEntry[];
 
@@ -36,6 +38,8 @@ declare module 'github' {
 
     type GetBranchResponse = BranchResponseEntry;
 
+    type GetRepoTagsResponse = GetRepoTagsEntry[];
+
     interface GetBranchOptions {
       owner: string;
       repo: string;
@@ -47,6 +51,7 @@ declare module 'github' {
     interface Repos {
       getBranches(opts: GetBranchesOptions): GetBranchesResponse;
       getBranch(opts: GetBranchOptions): GetBranchResponse;
+      getTags(opts: GetBranchesOptions): GetRepoTagsResponse;
     }
   }
 
