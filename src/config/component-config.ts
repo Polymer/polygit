@@ -29,8 +29,9 @@ export async function configForPath(path: ParsedPath): Promise<RepoConfig> {
   const component = path.component;
   let configForComponent: RepoConfig|null = null;
   for (const config of path.repoConfigs) {
-    if (config.component === component) {
+    if (component.match(config.component)) {
       configForComponent = config;
+      configForComponent.component = component;
       break;
     }
   }
