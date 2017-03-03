@@ -21,8 +21,11 @@ import {ResolvedComponent} from './resolver';
 export function fetchTarball(
     resolvedComponent: ResolvedComponent, apiKey: string): request.Request {
   const tarballUrl =
-      `https://api.github.com/repos/${resolvedComponent.org
-      }/${resolvedComponent.component}/tarball/${resolvedComponent.sha}`;
+      `https://api.github.com/repos/${
+                                      resolvedComponent.org
+                                    }/${
+                                        resolvedComponent.component
+                                      }/tarball/${resolvedComponent.sha}`;
   return request(
       tarballUrl,
       {headers: {'user-agent': 'Polygit', 'authorization': `token ${apiKey}`}});

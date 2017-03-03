@@ -34,11 +34,11 @@ declare module 'github' {
 
     type BranchResponseEntry = {name: string, commit: {sha: string}};
 
-    type GetBranchesResponse = BranchResponseEntry[];
+    type GetBranchesResponse = {data: BranchResponseEntry[]};
 
     type GetBranchResponse = BranchResponseEntry;
 
-    type GetRepoTagsResponse = GetRepoTagsEntry[];
+    type GetRepoTagsResponse = {data: GetRepoTagsEntry[]};
 
     interface GetBranchOptions {
       owner: string;

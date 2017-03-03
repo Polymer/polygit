@@ -61,8 +61,10 @@ export async function configForPath(path: ParsedPath): Promise<RepoConfig> {
 
     const githubUrlIndex = repoFromBower.url.indexOf(GITHUB_URL);
     if (githubUrlIndex === -1) {
-      throw new Error(`Non-github URL returned from bower for "${component
-                      }", unable to resolve.`);
+      throw new Error(
+          `Non-github URL returned from bower for "${
+                                                     component
+                                                   }", unable to resolve.`);
     }
 
     const githubOffset = githubUrlIndex + GITHUB_URL.length;

@@ -35,10 +35,13 @@ export class MemcachedUtil {
 
   static get(memcached: Memcached, key: string): Promise<any> {
     return new Promise((resolve, reject) => {
+      const start = +new Date();
       memcached.get(key, (err, data) => {
         if (err) {
           reject(err);
         } else {
+          const ms = (+new Date() - start);
+          console.log(`cache lookup time: ${ms}ms`);
           resolve(data);
         }
       });
@@ -46,35 +49,35 @@ export class MemcachedUtil {
   }
 }
 
-// export class MemcachedUtil {
-//   static async save(
-//       memcached: Memcached,
-//       key: string,
-//       value: string|Buffer|Promise<string|Buffer>|any,
-//       lifetime?: number): Promise<void> {
-//     await new Promise(async(resolve, reject) => {
-//       try {
-//         let v = await value;
-//         if (Buffer.isBuffer(v)) {
-//           v = v.toString('utf8');
-//         }
-//         // memory cache uses milliseconds for cache timing.
-//         cache.put(key, v, lifetime * 1000 || 600000);
-//         resolve();
-//       } catch (err) {
-//         reject(err);
-//       }
-//     });
-//   }
-//
-//   static get(memcached: Memcached, key: string): Promise<any> {
-//     return new Promise((resolve, reject) => {
-//       try {
-//         const data = cache.get(key);
-//         resolve(data);
-//       } catch (err) {
-//         reject(err);
-//       }
-//     });
-//   }
-// }
+export class InMemoryCache {
+  static async save(
+      memcached: Memcached,
+      key: string,
+      value: string|Buffer|Promise<string|Buffer>|any,
+      lifetime?: number): Promise<void> {
+    await new Promise(async(resolve, reject) => {
+      try {
+        let v = await value;
+        if (Buffer.isBuffer(v)) {
+          v = v.toString('utf8');
+        }
+        // memory cache uses milliseconds for cache timing.
+        cache.put(key, v, lifetime && lifetime * 1000 || 600000);
+        resolve();
+      } catch (err) {
+        reject(err);
+      }
+    });
+  }
+
+  static get(memcached: Memcached, key: string): Promise<any> {
+    return new Promise((resolve, reject) => {
+      try {
+        const data = cache.get(key);
+        resolve(data);
+      } catch (err) {
+        reject(err);
+      }
+    });
+  }
+}

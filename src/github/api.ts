@@ -15,27 +15,33 @@
 import * as GitHubApi from 'github';
 
 async function combineAllResponsePages<T>(
-    api: GitHubApi, initialResponse: T[]): Promise<T[]> {
-  let response = initialResponse.slice();
-  console.log("response: ", initialResponse);
+    api: GitHubApi, initialResponse: {data: T[]}): Promise<T[]> {
+  if (!initialResponse || !initialResponse.data) {
+    console.log('Missing initial response.');
+    return [];
+  }
+  if (!initialResponse.data.slice) {
+    console.log('slice keys: ' + Object.keys(initialResponse));
+    console.log(initialResponse);
+    return [];
+  }
+  let response = initialResponse.data.slice();
   while (api.hasNextPage(initialResponse)) {
     initialResponse = await api.getNextPage(initialResponse);
-  console.log(initialResponse);
-    response = response.concat(initialResponse);
+    // console.log(initialResponse);
+    response = response.concat(initialResponse.data);
   }
   return response;
 }
 
 export async function getAllTags(api: GitHubApi, org: string, repo: string):
-    Promise<GitHubApi.GetRepoTagsResponse> {
-      console.log("getting tags");
+    Promise<GitHubApi.GetRepoTagsEntry[]> {
   return combineAllResponsePages(
       api, await api.repos.getTags({owner: org, repo: repo}));
 }
 
 export async function getBranches(api: GitHubApi, org: string, repo: string):
-    Promise<GitHubApi.GetBranchesResponse> {
-      console.log("getting branches");
+    Promise<GitHubApi.BranchResponseEntry[]> {
   return combineAllResponsePages(
       api, await api.repos.getBranches({owner: org, repo: repo}));
 }

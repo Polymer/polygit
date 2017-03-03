@@ -16,13 +16,14 @@ require('source-map-support').install();
 
 import * as fs from 'fs';
 import * as GithubApi from 'github';
-import * as Koa from 'koa';
+import * as Application from 'koa';
 import * as koaSend from 'koa-send';
 import * as Memcached from 'memcached';
 import * as mime from 'mime';
 import * as path from 'path';
 import * as request from 'request';
-import * as rimraf from 'rimraf-promise';
+import * as requestPromise from 'request';
+import * as rimraf from 'rmfr';
 import * as stream from 'stream';
 import * as process from 'process';
 
@@ -38,13 +39,18 @@ import {extractAndIndexTarball} from '../tarball/extract';
 
 let memcachedConfig: string;
 if (process.env.GAE_MEMCACHE_HOST) {
-  memcachedConfig = `${process.env['GAE_MEMCACHE_HOST']}:${process.env['GAE_MEMCACHE_PORT']}`;
-}
-else if (process.env.USE_GAE_MEMCACHE) {
+  memcachedConfig =
+      `${process.env.GAE_MEMCACHE_HOST}:${process.env.GAE_MEMCACHE_PORT}`;
+} else if (process.env.USE_GAE_MEMCACHE) {
   memcachedConfig = 'memcached:11211';
+} else if (process.env.GAE_MEMCACHE_PROXY) {
+  memcachedConfig = process.env.GAE_MEMCACHE_PROXY;
 } else {
   memcachedConfig = 'localhost:11211';
 }
+console.log(process.env.GAE_MEMCACHE_HOST);
+console.log(process.env.GAE_MEMCACHE_PORT);
+console.log('Memcached config: ', memcachedConfig);
 
 const memcached = new Memcached(memcachedConfig);
 // const memcached: any = {};
@@ -84,26 +90,39 @@ function getGithubToken(): Promise<string> {
   });
 }
 
-const app = new Koa();
+const app = new Application();
 
 const SEND_OPTIONS = {
   root: path.join(process.cwd(), 'static')
 };
 
 const staticPathHandlers:
-    {[key: string]: (ctx: Koa.Context, next?: Function) => void} = {
-      '/_ah/health': (ctx: Koa.Context) => {
+    {[key: string]: (ctx: Application.Context, next?: Function) => void} = {
+      '/_ah/health': (ctx: Application.Context) => {
         ctx.body = 'OK';
         ctx.status = 200;
         return;
       },
-      '/index.html': async(ctx: Koa.Context) => {
+      '/_ah/warmup': async(ctx: Application.Context) => {
+        try {
+          await requestPromise(
+              'localhost:8080/components/polymer/polymer.html');
+          ctx.body = 'OK';
+          ctx.status = 200;
+          return;
+        } catch (err) {
+          ctx.body = 'NOT OK';
+          ctx.status = 500;
+          return;
+        }
+      },
+      '/index.html': async(ctx: Application.Context) => {
         return await koaSend(ctx, 'index.html', SEND_OPTIONS);
       },
-      '/favicon.ico': async(ctx: Koa.Context) => {
+      '/favicon.ico': async(ctx: Application.Context) => {
         return await koaSend(ctx, 'favicon.ico', SEND_OPTIONS);
       },
-      '/': (ctx: Koa.Context) => {
+      '/': (ctx: Application.Context) => {
         return staticPathHandlers['/index.html'](ctx);
       }
     };
@@ -113,10 +132,13 @@ app.use(async function(ctx, next) {
     return await staticPathHandlers[ctx.path](ctx, next);
   }
   const start = +new Date();
-  await next();
-  const ms = (+new Date() - start);
-  ctx.set('X-Response-Time', `${ms}ms`);
-  ctx.set('Access-Control-Allow-Origin', '*');
+  try {
+    await next();
+  } finally {
+    const ms = (+new Date() - start);
+    ctx.set('X-Response-Time', `${ms}ms`);
+    ctx.set('Access-Control-Allow-Origin', '*');
+  }
 });
 
 // logger
@@ -129,7 +151,7 @@ app.use(async function(ctx, next) {
 });
 
 // URL Parsing
-app.use(async function(ctx: Koa.Context, next: Function) {
+app.use(async function(ctx: Application.Context, next: Function) {
   try {
     ctx.state.parsedPath = parsePath(decodeURI(ctx.path));
   } catch (err) {
@@ -145,13 +167,16 @@ app.use(async function(ctx: Koa.Context, next: Function) {
 });
 
 // Config
-app.use(async function(ctx: Koa.Context, next: Function) {
-  ctx.state.resolvedConfig = await configForPath(ctx.state.parsedPath);
-  await next();
+app.use(async function(ctx: Application.Context, next: Function) {
+  try {
+    ctx.state.resolvedConfig = await configForPath(ctx.state.parsedPath);
+  } finally {
+    await next();
+  }
 });
 
 // Github API
-app.use(async function(ctx: Koa.Context, next: Function) {
+app.use(async function(ctx: Application.Context, next: Function) {
   const config: RepoConfig = ctx.state.resolvedConfig;
   if (!config.org) {
     throw new Error(`Unable to determine github org for ${config.component}`);
@@ -169,9 +194,7 @@ app.use(async function(ctx: Koa.Context, next: Function) {
     console.log(`Metadata cache miss for ${config.org}/${config.component}`);
     ctx.state.branches =
         await getBranches(github, config.org, config.component);
-    console.log(ctx.state.branches);
     ctx.state.tags = await getAllTags(github, config.org, config.component);
-    console.log(ctx.state.tags);
     const metadata: GithubMetadata.RepoMetadata = {
       branches: ctx.state.branches,
       tags: ctx.state.tags
@@ -184,7 +207,7 @@ app.use(async function(ctx: Koa.Context, next: Function) {
 });
 
 // Resolving
-app.use(async function(ctx: Koa.Context, next: Function) {
+app.use(async function(ctx: Application.Context, next: Function) {
   ctx.state.resolvedComponent = await resolveComponentPath(
       ctx.state.parsedPath,
       ctx.state.resolvedConfig,
@@ -194,7 +217,7 @@ app.use(async function(ctx: Koa.Context, next: Function) {
 });
 
 // Fetching
-app.use(async function(ctx: Koa.Context, next: Function) {
+app.use(async function(ctx: Application.Context, next: Function) {
   const requestedComponentKey =
       serializeResolvedComponent(ctx.state.resolvedComponent);
   const cachedFile = await MemcachedUtil.get(memcached, requestedComponentKey);

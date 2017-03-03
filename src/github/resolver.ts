@@ -51,7 +51,7 @@ function resolveComponentByTag(
     component: string,
     org: string,
     range: string,
-    tags: GitHubApi.GetRepoTagsResponse): string {
+    tags: GitHubApi.GetRepoTagsEntry[]): string {
   let latestMatchingTag: {tag: string, sha: string}|undefined;
   for (const tag of tags) {
     // Strip "refs/tags/" from the ref to get tagname
@@ -80,22 +80,24 @@ async function resolveComponentByBranch(
     component: string,
     org: string,
     branchName: string,
-    branches: GitHubApi.GetBranchesResponse):
+    branches: GitHubApi.BranchResponseEntry[]):
     Promise<string> {
       for (const branch of branches) {
         if (branch.name === branchName) {
           return branch.commit.sha;
         }
       }
-      throw new Error(`Unable to find branch "${branchName}" for repo "${org
-                      }/${component}"`);
+      throw new Error(
+          `Unable to find branch "${branchName}" for repo "${org}/${
+                                                                    component
+                                                                  }"`);
     }
 
 export async function resolveComponentPath(
     path: ParsedPath,
     config: RepoConfig,
-    tags: GitHubApi.GetRepoTagsResponse,
-    branches: GitHubApi.GetBranchesResponse): Promise<ResolvedComponent> {
+    tags: GitHubApi.GetRepoTagsEntry[],
+    branches: GitHubApi.BranchResponseEntry[]): Promise<ResolvedComponent> {
   if (!config.org) {
     throw new Error(
         `Config "${config}" without organization` +

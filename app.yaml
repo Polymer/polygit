@@ -1,5 +1,15 @@
 runtime: nodejs
 env: flex
-instance_class: F4
+instance_class: F1
 env_variables:
   USE_GAE_MEMCACHE: 1
+threadsafe: true
+basic_scaling:
+  idle_timeout: 10m
+# automatic_scaling:
+#   max_concurrent_requests: 30
+#   min_num_instances: 2
+#   max_num_instances: 20
+#   cool_down_period_sec: 60
+#   cpu_utilization:
+#     target_utilization: 0.5
