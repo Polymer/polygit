@@ -52,7 +52,7 @@ console.log(process.env.GAE_MEMCACHE_HOST);
 console.log(process.env.GAE_MEMCACHE_PORT);
 console.log('Memcached config: ', memcachedConfig);
 
-const memcached = new Memcached(memcachedConfig);
+const memcached = new Memcached(memcachedConfig, {maxValue: 10485760});
 // const memcached: any = {};
 
 
@@ -178,7 +178,7 @@ app.use(async function(ctx: Application.Context, next: Function) {
 // Github API
 app.use(async function(ctx: Application.Context, next: Function) {
   const config: RepoConfig = ctx.state.resolvedConfig;
-  if (!config.org) {
+  if (!config || !config.org) {
     throw new Error(`Unable to determine github org for ${config.component}`);
   }
   const metadataKey =
