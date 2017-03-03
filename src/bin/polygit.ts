@@ -31,7 +31,7 @@ import {configForPath} from '../config/component-config';
 import {getAllTags, getBranches} from '../github/api';
 import {fetchTarball} from '../github/fetcher';
 import * as GithubMetadata from '../github/metadata';
-import {copyResolvedComponent, deserializeResolvedComponent, resolveComponentPath, ResolvedComponent, serializeResolvedComponent} from '../github/resolver';
+import {copyResolvedComponent, deserializeResolvedComponent, ResolutionError, resolveComponentPath, ResolvedComponent, serializeResolvedComponent} from '../github/resolver';
 import {MemcachedUtil} from '../memcached/util';
 import {parsePath} from '../path/parser';
 import {ParsedPath, RepoConfig} from '../path/path';
@@ -208,11 +208,19 @@ app.use(async function(ctx: Application.Context, next: Function) {
 
 // Resolving
 app.use(async function(ctx: Application.Context, next: Function) {
+  try {
   ctx.state.resolvedComponent = await resolveComponentPath(
       ctx.state.parsedPath,
       ctx.state.resolvedConfig,
       ctx.state.tags,
       ctx.state.branches);
+  } catch (err) {
+    if (err instanceof ResolutionError) {
+      ctx.body = err.message;
+      ctx.status = 404;
+      return;
+    }
+  }
   await next();
 });
 

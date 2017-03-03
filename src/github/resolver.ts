@@ -26,6 +26,10 @@ export interface ResolvedComponent {
   org: string;
 }
 
+export class ResolutionError extends Error {};
+export class BranchNotFoundError extends ResolutionError {}
+export class TagNotFoundError extends ResolutionError {}
+
 export function copyResolvedComponent(component: ResolvedComponent):
     ResolvedComponent {
   return {
@@ -87,7 +91,7 @@ async function resolveComponentByBranch(
           return branch.commit.sha;
         }
       }
-      throw new Error(
+      throw new BranchNotFoundError(
           `Unable to find branch "${branchName}" for repo "${org}/${
                                                                     component
                                                                   }"`);
