@@ -38,6 +38,8 @@ import {ParsedPath, RepoConfig} from '../path/path';
 import {extractAndIndexTarball} from '../tarball/extract';
 import {UserError} from '../errors/errors';
 
+const koaCompress = require('koa-compress');
+
 let memcachedConfig: string;
 if (process.env.GAE_MEMCACHE_HOST) {
   memcachedConfig =
@@ -280,8 +282,11 @@ app.use(async function(ctx: Application.Context, next: Function) {
     return;
   }
   ctx.body = fetchedFile;
+  await next();
   return;
 });
+
+app.use(koaCompress());
 
 getGithubToken().then((token) => {
   githubToken = token;
