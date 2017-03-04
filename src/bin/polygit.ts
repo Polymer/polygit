@@ -281,6 +281,7 @@ app.use(async function(ctx: Application.Context, next: Function) {
     ctx.body = 'Not found.';
     return;
   }
+  (<any>ctx)['compress'] = true;
   ctx.body = fetchedFile;
   await next();
   return;
