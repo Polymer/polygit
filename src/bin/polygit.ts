@@ -179,7 +179,8 @@ app.use(async function(ctx: Application.Context, next: Function) {
 app.use(async function(ctx: Application.Context, next: Function) {
   const config: RepoConfig = ctx.state.resolvedConfig;
   if (!config || !config.org) {
-    ctx.body = `Unable to determine github org for ${ctx.state.parsedPath.component}`;
+    ctx.body =
+        `Unable to determine github org for ${ctx.state.parsedPath.component}`;
     ctx.status = 404;
     return;
   }
