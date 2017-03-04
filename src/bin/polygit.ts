@@ -179,7 +179,9 @@ app.use(async function(ctx: Application.Context, next: Function) {
 app.use(async function(ctx: Application.Context, next: Function) {
   const config: RepoConfig = ctx.state.resolvedConfig;
   if (!config || !config.org) {
-    throw new Error(`Unable to determine github org for ${config.component}`);
+    ctx.body = `Unable to determine github org for ${ctx.state.parsedPath.component}`;
+    ctx.status = 404;
+    return;
   }
   const metadataKey =
       GithubMetadata.makeMetadataKey(config.org, config.component);
@@ -209,17 +211,18 @@ app.use(async function(ctx: Application.Context, next: Function) {
 // Resolving
 app.use(async function(ctx: Application.Context, next: Function) {
   try {
-  ctx.state.resolvedComponent = await resolveComponentPath(
-      ctx.state.parsedPath,
-      ctx.state.resolvedConfig,
-      ctx.state.tags,
-      ctx.state.branches);
+    ctx.state.resolvedComponent = await resolveComponentPath(
+        ctx.state.parsedPath,
+        ctx.state.resolvedConfig,
+        ctx.state.tags,
+        ctx.state.branches);
   } catch (err) {
     if (err instanceof ResolutionError) {
       ctx.body = err.message;
       ctx.status = 404;
       return;
     }
+    throw err;
   }
   await next();
 });
