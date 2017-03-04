@@ -16,6 +16,7 @@ import * as bower from 'bower';
 import cache = require('memory-cache');
 
 import {LatestRepoConfig, ParsedPath, RepoConfig} from '../path/path';
+import {UserError} from '../errors/errors';
 
 const GITHUB_URL = 'github.com/';
 
@@ -24,6 +25,8 @@ const ORG_TABLE: {[key: string]: string} = {
   'font-roboto': 'PolymerElements',
   'paper-ripple': 'PolymerElements'
 };
+
+export class ConfigError extends UserError {}
 
 export async function configForPath(path: ParsedPath): Promise<RepoConfig> {
   const component = path.component;
@@ -56,6 +59,10 @@ export async function configForPath(path: ParsedPath): Promise<RepoConfig> {
               .on('end', (results: bower.LookupResponse) => resolve(results))
               .on('error', (err: Error) => reject(err));
         });
+    if (!repoFromBower) {
+      throw new ConfigError(
+          `Unable to find bower registry entry for component '${component}'`);
+    }
     if (!cachedRepo) {
       cache.put(component, repoFromBower, 60000);
     }

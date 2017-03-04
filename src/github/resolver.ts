@@ -17,6 +17,7 @@ import * as GitHubApi from 'github';
 import * as jsonStableStringify from 'json-stable-stringify';
 import * as semver from 'semver';
 
+import {UserError} from '../errors/errors';
 import {LatestRepoConfig, ParsedPath, RepoConfig} from '../path/path';
 
 export interface ResolvedComponent {
@@ -26,9 +27,8 @@ export interface ResolvedComponent {
   org: string;
 }
 
-export class ResolutionError extends Error {};
-export class BranchNotFoundError extends ResolutionError {}
-export class TagNotFoundError extends ResolutionError {}
+export class BranchNotFoundError extends UserError {}
+export class TagNotFoundError extends UserError {}
 
 export function copyResolvedComponent(component: ResolvedComponent):
     ResolvedComponent {
