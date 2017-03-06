@@ -111,6 +111,9 @@ export async function resolveComponentPath(
   switch (config.kind) {
     case 'latest':
       sha = await resolveComponentByTag(path.component, config.org, '*', tags);
+      if (!sha) {
+        sha = await resolveComponentByBranch(path.component, config.org, 'master', branches);
+      }
       break;
     case 'semver':
       sha = await resolveComponentByTag(
