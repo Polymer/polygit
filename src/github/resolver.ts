@@ -61,6 +61,7 @@ function resolveComponentByTag(
     // Strip "refs/tags/" from the ref to get tagname
     const tagName = tag.name;
     if (tagName === range) {
+      latestMatchingTag = {tag: tagName, sha: tag.commit.sha};
       break;
     }
     // console.log(tag, range);
