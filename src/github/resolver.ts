@@ -110,9 +110,12 @@ export async function resolveComponentPath(
   let sha: string;
   switch (config.kind) {
     case 'latest':
-      sha = await resolveComponentByTag(path.component, config.org, '*', tags);
-      if (!sha) {
-        sha = await resolveComponentByBranch(path.component, config.org, 'master', branches);
+      try {
+        sha =
+            await resolveComponentByTag(path.component, config.org, '*', tags);
+      } catch (err) {
+        sha = await resolveComponentByBranch(
+            path.component, config.org, 'master', branches);
       }
       break;
     case 'semver':
