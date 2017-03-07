@@ -16,7 +16,7 @@ import * as Memcached from 'memcached';
 import * as cache from 'memory-cache';
 
 // TODO: figure out how memcached works in appengine flexible.
-export class MemcachedUtil {
+export class RealMemcachedUtil {
   static async save(
       memcached: Memcached,
       key: string,
@@ -49,7 +49,7 @@ export class MemcachedUtil {
   }
 }
 
-export class InMemoryCache {
+export class MemcachedUtil {
   static async save(
       memcached: Memcached,
       key: string,
