@@ -214,7 +214,7 @@ app.use(async function(ctx: Application.Context, next: Function) {
     };
     console.log('Saving metadata');
     await MemcachedUtil.save(
-        memcached, metadataKey, JSON.stringify(metadata), 60);
+        memcached, metadataKey, JSON.stringify(metadata), 120);
   }
   await next();
 });
@@ -264,7 +264,8 @@ app.use(async function(ctx: Application.Context, next: Function) {
     });
     if (buffer) {
       // Files should never change, so cache for 10m
-      saveRequests.push(MemcachedUtil.save(memcached, serialized, buffer, 600));
+      saveRequests.push(
+          MemcachedUtil.save(memcached, serialized, buffer, 3600));
     }
   }
   // Wait until all files are saved to memcached.
